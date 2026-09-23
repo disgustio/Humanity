@@ -13,9 +13,10 @@ import (
 )
 
 // ---------- CONFIG ----------
-const (
+var (
 	ListenAddr = "0.0.0.0:19132"
-	RemoteAddr = "bedrock.example.net:19132" // REPLACE THIS
+	RealmCode  = ""                         // set with .humanity realm <code>
+	ServerAddr = "bedrock.example.net:19132" // set with .humanity server <ip:port>
 )
 
 // ---------- FEATURES ----------
@@ -89,9 +90,18 @@ func handleClient(client *minecraft.Conn) {
 		IdentityData: client.IdentityData(),
 		ClientData:   client.ClientData(),
 	}
-	server, err := dialer.Dial("raknet", RemoteAddr)
+
+	var server *minecraft.Conn
+	var err error
+
+	if RealmCode != "" {
+		server, err = dialer.DialRealm(RealmCode)
+	} else {
+		server, err = dialer.Dial("raknet", ServerAddr)
+	}
+
 	if err != nil {
-		log.Printf("dial remote error: %v", err)
+		log.Printf("dial error: %v", err)
 		client.Close()
 		return
 	}
@@ -257,6 +267,18 @@ func handleChatCommand(client *minecraft.Conn, msg string) {
 			} else {
 				fmt.Sscanf(parts[2], "%d", &F.CPSLimit)
 			}
+		}
+	case "realm":
+		if len(parts) > 2 {
+			RealmCode = parts[2]
+			ServerAddr = ""
+			sendChat(client, "Realm set. Reconnect to apply.")
+		}
+	case "server":
+		if len(parts) > 2 {
+			ServerAddr = parts[2]
+			RealmCode = ""
+			sendChat(client, "Server set. Reconnect to apply.")
 		}
 	}
 }
